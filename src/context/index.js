@@ -14,6 +14,7 @@ export function useWalletContext() {
 export function ContextProvider({ children }) {
     const { connect, connected, signAndSubmitTransaction, account, disconnect } = useWallet();
     const [isLoading, setLoading] = useState(false);
+    const [isPlayBackground, setIsPlayBackground] = useState(true);
     const { toastSeccess, toastError } = useCusToast();
 
     const checkLogin = async () => {
@@ -46,22 +47,25 @@ export function ContextProvider({ children }) {
         }
     };
     const mint = async (functionName) => {
-        const isLogin = await checkLogin();
-        if (!isLogin) return null;
-        if (isLoading) return null;
-        const shovel = {
-            arguments: [],
-            function: `${CONTRACT_ADDR}::urn_to_earn::${functionName}`,
-            type: 'entry_function_payload',
-            type_arguments: [],
-        };
-        const hash = await signAndSubmitTransactionFnc(shovel);
-        if (hash) {
-            toastSeccess(hash);
-        } else {
-            toastError('error');
+        try {
+            const isLogin = await checkLogin();
+            if (!isLogin) return null;
+            if (isLoading) return null;
+            const shovel = {
+                arguments: [],
+                function: `${CONTRACT_ADDR}::urn_to_earn::${functionName}`,
+                type: 'entry_function_payload',
+                type_arguments: [],
+            };
+            const hash = await signAndSubmitTransactionFnc(shovel);
+            if (hash) {
+                toastSeccess(hash);
+            } else {
+                toastError('error');
+            }
+        } catch (error) {
+            toastError(error);
         }
-        return null;
     };
 
     const value = useMemo(() => ({
@@ -73,8 +77,10 @@ export function ContextProvider({ children }) {
         isLoading,
         account,
         disconnect,
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }), [connect, connected, mint, signAndSubmitTransaction, isLoading, account, disconnect]);
+        isPlayBackground,
+        setIsPlayBackground,
+        // eslint-disable-next-line react-hooks/exhaustive-deps, max-len
+    }), [connect, connected, mint, signAndSubmitTransaction, isLoading, account, disconnect, isPlayBackground]);
 
     return (
         <Context.Provider value={value}>
