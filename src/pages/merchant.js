@@ -5,8 +5,10 @@ import { useWalletContext } from '../context';
 import Layout from '../layout';
 import HomeBg from '../assets/images/merchant/merchant_bg.png';
 import HomeBgWebp from '../assets/images/merchant/merchant_bg.webp';
-import HomeBaseBg from '../assets/images/merchant/merchant_1440.png';
-import HomeBaseBgWebp from '../assets/images/merchant/merchant_1440.webp';
+import HomeBaseBg from '../assets/images/merchant/merchant_1024.jpg';
+import HomeBaseBgWebp from '../assets/images/merchant/merchant_1024.webp';
+import Home1440Bg from '../assets/images/merchant/merchant_1440.png';
+import Home1440BgWebp from '../assets/images/merchant/merchant_1440.webp';
 import FurnaceImg from '../assets/images/merchant/merchant_furnace.png';
 import FurnaceImgWebp from '../assets/images/merchant/merchant_furnace.webp';
 import BoardSmallImg from '../assets/images/merchant/merchant_board_small.png';
@@ -26,6 +28,7 @@ const Merchant = ({ isSupportWebp }) => {
                 maxW="1920px"
                 bgImage={{
                     base: isSupportWebp ? HomeBaseBgWebp.src : HomeBaseBg.src,
+                    mid: isSupportWebp ? Home1440BgWebp.src : Home1440Bg.src,
                     desktop: isSupportWebp ? HomeBgWebp.src : HomeBg.src,
                 }}
                 bgRepeat="no-repeat"
@@ -40,21 +43,44 @@ const Merchant = ({ isSupportWebp }) => {
                     }}
                     bgRepeat="no-repeat"
                     bgSize="100% 100%"
-                    w={{ base: '246px' }}
-                    h={{ base: '358px' }}
+                    w={{ base: '193px', mid: '246px' }}
+                    h={{ base: '281px', mid: '358px' }}
                     position="absolute"
-                    bottom="32vh"
-                    right={{ base: '12%' }}
+                    bottom={{ base: '35vh', mid: '34vh', desktop: '32vh' }}
+                    right={{ base: '4%', mid: '3.5%', desktop: '12%' }}
                 >
-                    <Flex justifyContent="center" mt="4rem" wrap="wrap" p="0 49px" pb="2.3rem">
-                        <Text w="100%" textAlign="center" color="#794D0B" fontSize="20px" fontWeight={700} mb="0.9rem">
+                    <Flex
+                        justifyContent="center"
+                        mt={{ base: '3rem', mid: '4.5rem', desktop: '5rem' }}
+                        wrap="wrap"
+                        p={{ base: '0 29px', mid: '0 49px' }}
+                        pb="2.3rem"
+                    >
+                        <Text
+                            w="100%"
+                            textAlign="center"
+                            color="#794D0B"
+                            fontSize={{ base: '16px', mid: '20px' }}
+                            fontWeight={700}
+                            mb={{ base: '10px', mid: '14px', desktop: '14px' }}
+
+                        >
                             Golden urn
                         </Text>
                         <Image src={BowlImg} alt="Bowl" />
-                        <Text w="100%" textAlign="center" color="#794D0B" fontSize="14px" fontWeight={500} mb="0.9rem" mt="0.9rem">
+                        <Text
+                            w="100%"
+                            textAlign="center"
+                            color="#794D0B"
+                            fontSize="14px"
+                            fontWeight={500}
+                            mb={{ base: '10px', mid: '14px', desktop: '14px' }}
+                            mt={{ base: '10px', mid: '14px', desktop: '14px' }}
+                            lineHeight={{ base: '20px' }}
+                        >
                             it&apos;s lame without the golden urn.
                         </Text>
-                        <Button variant="gold" onClick={() => mint('mint_golden_bone')}>
+                        <Button variant="gold" onClick={() => mint('mint_golden_bone')} w={{ base: '140px', mid: '148px' }}>
                             Forge
                         </Button>
                     </Flex>
@@ -63,13 +89,13 @@ const Merchant = ({ isSupportWebp }) => {
                     bgImage={{
                         base: isSupportWebp ? FurnaceImgWebp.src : FurnaceImg.src,
                     }}
-                    w="24.4rem"
+                    w={{ base: '287px', mid: '389px', desktop: '24.4rem' }}
                     bgRepeat="no-repeat"
                     bgSize="100% 100%"
                     minH={{ base: '42.3vh' }}
                     position="absolute"
                     bottom="0px"
-                    right={{ base: '19%' }}
+                    right={{ base: '13%', mid: '12%', desktop: '19%' }}
                 />
                 <Flex
                     wrap="wrap"
@@ -87,30 +113,29 @@ const Merchant = ({ isSupportWebp }) => {
                         }}
                         bgRepeat="no-repeat"
                         bgSize="100% 100%"
-                        w={{ base: '556px', mid: '556px', desktop: '556px' }}
-                        h={{ base: '365px', mid: '365px', desktop: '406px' }}
+                        w={{ base: '436px', mid: '556px', desktop: '556px' }}
+                        h={{ base: '319px', mid: '406px', desktop: '406px' }}
                     >
-
-                        <Flex justifyContent="space-evenly" mt={{ base: '8.5rem', desktop: '10rem' }}>
-                            <Flex wrap="wrap" w="40%" bg="#FCD791" borderRadius="20px" p="16px" justifyContent="center">
-                                <Text fontSize="20px" fontWeight={700} color="#292229" textAlign="center" w="100%">
+                        <Flex justifyContent="space-evenly" mt={{ base: '8rem', mid: '10rem', desktop: '10rem' }}>
+                            <Flex wrap="wrap" w="40%" bg="#FCD791" borderRadius="20px" p={{ base: '14px', mid: '16px' }} justifyContent="center">
+                                <Text fontSize={{ base: '16px', mid: '20px' }} fontWeight={700} color="#292229" textAlign="center" w="100%">
                                     Buy shovel
                                 </Text>
-                                <Text mt="12px" fontSize="20px" fontWeight={500} color="#292229" textAlign="center" w="100%">
+                                <Text mt={{ base: '10px', mid: '12px' }} fontSize={{ base: '14px', mid: '20px' }} fontWeight={500} color="#292229" textAlign="center" w="100%">
                                     Every grave robber needs a shovel.
                                 </Text>
-                                <Button mt="12px" variant="dark" onClick={() => mint('mint_shovel')}>
+                                <Button height={{ base: '47px' }} mt={{ base: '10px', mid: '12px' }} variant="dark" onClick={() => mint('mint_shovel')}>
                                     Buy shovel
                                 </Button>
                             </Flex>
-                            <Flex wrap="wrap" w="40%" bg="#FCD791" borderRadius="20px" p="16px" justifyContent="center">
-                                <Text fontSize="20px" fontWeight={700} color="#292229" textAlign="center" w="100%">
+                            <Flex wrap="wrap" w="40%" bg="#FCD791" borderRadius="20px" p={{ base: '14px', mid: '16px' }} justifyContent="center">
+                                <Text fontSize={{ base: '16px', mid: '20px' }} fontWeight={700} color="#292229" textAlign="center" w="100%">
                                     Buy urn
                                 </Text>
-                                <Text mt="12px" fontSize="20px" fontWeight={500} color="#292229" textAlign="center" w="100%">
+                                <Text mt={{ base: '10px', mid: '12px' }} fontSize={{ base: '14px', mid: '20px' }} fontWeight={500} color="#292229" textAlign="center" w="100%">
                                     I think... you need an urn for bones.
                                 </Text>
-                                <Button mt="12px" variant="dark" onClick={() => mint('mint_urn')}>
+                                <Button height={{ base: '47px' }} mt={{ base: '10px', mid: '12px' }} variant="dark" onClick={() => mint('mint_urn')}>
                                     Buy urn
                                 </Button>
                             </Flex>

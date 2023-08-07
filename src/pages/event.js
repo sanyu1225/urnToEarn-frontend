@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+/* eslint-disable */
 import PropTypes from 'prop-types';
-import { Box, Flex, Text, Button, Icon } from '@chakra-ui/react';
+import { Box, Flex, Text } from '@chakra-ui/react';
 import Layout from '../layout';
+import FlexBlock from '../component/FlexBlock';
 import { useWalletContext } from '../context';
-import CONTRACT_ADDR from '../constant';
 import EventBg from '../assets/images/event/event_1920.jpg';
 import EventBgWebp from '../assets/images/event/event_1920.webp';
 import Event1440Bg from '../assets/images/event/event_1440.jpg';
@@ -11,151 +11,6 @@ import Event1440BgWebp from '../assets/images/event/event_1440.webp';
 import Event1024Bg from '../assets/images/event/event_1024.jpg';
 import Event1024BgWebp from '../assets/images/event/event_1024.webp';
 
-const FlexBlock = ({ title, collectionName }) => {
-  const { connected, wlMint, account } = useWalletContext();
-  const BAR_COUNT = 12;
-  const [desc, setDesc] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [buttonText, setButtonText] = useState('');
-  const [isDisabled, setIsDisabled] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const requests = [];
-      const quota = fetch('https://fullnode.testnet.aptoslabs.com/v1/view', {
-        method: 'POST',
-        body: JSON.stringify({
-          function: `${CONTRACT_ADDR}::whitelist::get_collection_left_quota`,
-          type_arguments: [],
-          arguments: [collectionName],
-        }),
-        headers: {
-          'content-type': 'application/json',
-        },
-      });
-      requests.push(quota);
-      if (account && account?.address) {
-        const isWhitelistAndMinted = fetch('https://fullnode.testnet.aptoslabs.com/v1/view', {
-          method: 'POST',
-          body: JSON.stringify({
-            function: `${CONTRACT_ADDR}::whitelist::view_is_whitelisted_and_minted`,
-            type_arguments: [],
-            arguments: [collectionName, account.address],
-          }),
-          headers: {
-            'content-type': 'application/json',
-          },
-        });
-        requests.push(isWhitelistAndMinted);
-      }
-      const [qResponse, wResponse] = await Promise.all(requests);
-      setIsLoading(false);
-      const quotaResponse = await qResponse.json();
-      if (Array.isArray(quotaResponse)) {
-        setDesc(`Free: ${quotaResponse[0]}\n50% off: ${quotaResponse[1]}`);
-      } else {
-        console.log(`quotaResponse should be array instead of ${quotaResponse}`);
-      }
-      if (wResponse) {
-        console.log(`💥 account?.address: ${JSON.stringify(account?.address, null, '	')}`);
-        try {
-          const isWhitelistAndMintedResponse = await wResponse.json();
-          if (Array.isArray(isWhitelistAndMintedResponse)) {
-            const mintable = isWhitelistAndMintedResponse[1];
-            const whitelisted = isWhitelistAndMintedResponse[0];
-            if (mintable) {
-              setButtonText(whitelisted ? 'Claim' : 'Not eligible');
-              setIsDisabled(!whitelisted);
-            } else if (whitelisted) {
-              setButtonText('Minted');
-              setIsDisabled(true);
-            } else {
-              setButtonText('Not eligible');
-              setIsDisabled(true);
-            }
-          } else {
-            setButtonText('some thing wrong');
-            console.log(
-              `isWhitelistResponse should be array instead of ${isWhitelistAndMintedResponse}`
-            );
-          }
-        } catch (error) {
-          setButtonText('some thing wrong');
-          console.log(error);
-        }
-      }
-    };
-    fetchData();
-  }, [account]);
-
-  let buttonContent;
-  if (!connected) {
-    buttonContent = <Text>Not connceted</Text>;
-  } else if (isLoading) {
-    buttonContent = (
-      <Icon viewBox="0 0 100 100" preserveAspectRatio="xMidYMid">
-        {Array.from(new Array(BAR_COUNT), (value, index) => index).map((index) => (
-          <g key={index} transform={`rotate(${index * (360 / BAR_COUNT)} 50 50)`}>
-            <rect x={47} y={12} rx={4} ry={4} width={6} height={18}>
-              <animate
-                attributeName="opacity"
-                values="1;0"
-                dur="1s"
-                begin={`${index * (1 / BAR_COUNT) - 1}s`}
-                repeatCount="indefinite"
-              />
-            </rect>
-          </g>
-        ))}
-      </Icon>
-    );
-  } else {
-    buttonContent = <Text>{buttonText}</Text>;
-  }
-
-  return (
-    <Flex
-      w="200px"
-      h="177px"
-      flexDirection="column"
-      p="20px"
-      bg="#292229"
-      borderRadius="20px"
-      border="1px solid #FFF3CD"
-      rowGap="16px"
-    >
-      <Text
-        fontSize="20px"
-        fontWeight={700}
-        color="#FFF3CD"
-        textAlign="center"
-        w="100%"
-        lineHeight="24px"
-      >
-        {title}
-      </Text>
-      <Text
-        fontSize="14px"
-        fontWeight={500}
-        color="#FFF3CD"
-        textAlign="center"
-        w="100%"
-        lineHeight="17px"
-        whiteSpace="pre-line"
-      >
-        {desc}
-      </Text>
-      <Button
-        variant="primary"
-        onClick={() => wlMint(collectionName)}
-        h="47px"
-        isDisabled={isDisabled}
-      >
-        {buttonContent}
-      </Button>
-    </Flex>
-  );
-};
 
 // eslint-disable react/jsx-boolean-value
 const EventPage = ({ isSupportWebp }) => {
@@ -182,7 +37,7 @@ const EventPage = ({ isSupportWebp }) => {
           flexDirection="column"
           justifyContent="start"
           rowGap="60px"
-          p="12vh"
+          p="15vh"
         >
           <Flex width="670px" flexDirection="column">
             <Flex
@@ -197,16 +52,16 @@ const EventPage = ({ isSupportWebp }) => {
               <Text lineHeight="39px">Grab a god damn shovel and dig some shit!</Text>
               <Text fontSize="20px" whiteSpace="pre-line">
                 {
-                  "Snapshot already taken, check if you're eligible.\nEach NFT partners got reserved free or discounted mint quota. First come first serve."
+                  "Snapshot already taken, check if you're eligible.\nEach NFT partner got reserved free or discounted mint quota. First come first serve."
                 }
               </Text>
             </Flex>
           </Flex>
           <Flex width="432px" flexDirection="column">
             <Flex w="100%" wrap="wrap" justifyContent="center" gap="32px">
-              <FlexBlock title="Aptomingos" collectionName="Aptomingos" />
-              <FlexBlock title="Aptos Monkeys" collectionName="Aptos Monkeys" />
-              <FlexBlock title="Blocto" collectionName="Blocto" />
+              <FlexBlock title="Goblintown" collectionName="Aptomingos" />
+              <FlexBlock title="PEPE" collectionName="Aptos Monkeys" />
+              <FlexBlock title="Pogai" collectionName="Blocto" />
               {/* <FlexBlock
                 title="Urn2earn"
                 collectionName="Urn2earn"

@@ -1,9 +1,15 @@
 import { createContext, useContext, useState, useMemo } from 'react';
-import { BloctoWalletName } from '@blocto/aptos-wallet-adapter-plugin';
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
+import { AptosClient } from 'aptos';
 import useCusToast from '../hooks/useCusToast';
 
 import CONTRACT_ADDR from '../constant';
+
+export const TESTNET_NODE_URL = 'https://fullnode.testnet.aptoslabs.com/v1';
+
+const aptosClient = new AptosClient(TESTNET_NODE_URL, {
+    WITH_CREDENTIALS: false,
+});
 
 const Context = createContext();
 
@@ -15,13 +21,12 @@ export function ContextProvider({ children }) {
     const { connect, connected, signAndSubmitTransaction, account, disconnect } = useWallet();
     const [isLoading, setLoading] = useState(false);
     const [isPlayBackground, setIsPlayBackground] = useState(true);
-    const { toastSeccess, toastError } = useCusToast();
+    const { toastSeccess, toastError, toastLoading } = useCusToast();
 
     const checkLogin = async () => {
         if (connected) {
             return true;
         }
-        await connect(BloctoWalletName);
         return false;
     };
 
@@ -46,18 +51,19 @@ export function ContextProvider({ children }) {
             setLoading(false);
         }
     };
-    const mint = async (functionName) => {
+
+    // FIXME for default contract function name
+    const mint = async (functionName, args = []) => {
         try {
             const isLogin = await checkLogin();
-            if (!isLogin) return null;
-            if (isLoading) return null;
-            const shovel = {
-                arguments: [],
+            if (!isLogin || isLoading) return null;
+            const params = {
+                arguments: args,
                 function: `${CONTRACT_ADDR}::urn_to_earn::${functionName}`,
                 type: 'entry_function_payload',
                 type_arguments: [],
             };
-            const hash = await signAndSubmitTransactionFnc(shovel);
+            const hash = await signAndSubmitTransactionFnc(params);
             if (hash) {
                 toastSeccess(hash);
             } else {
@@ -68,7 +74,7 @@ export function ContextProvider({ children }) {
         }
     };
 
-    const wlMint = async (collectionName) => {
+    const wlMint = async (collectionName, toastId) => {
         const isLogin = await checkLogin();
         if (!isLogin) return null;
         if (isLoading) return null;
@@ -81,20 +87,31 @@ export function ContextProvider({ children }) {
         const hash = await signAndSubmitTransactionFnc(shovel);
         if (hash) {
             console.log(hash);
-            toastSeccess(hash);
+            toastLoading('pending confirmation', toastId);
+            try {
+                await waitForTransaction(hash);
+                toastSeccess(hash, toastId);
+            } catch (error) {
+                console.log(error);
+                toastError(JSON.stringify(error), toastId);
+            }
         } else {
-            toastError('error');
+            toastError('hash not found', toastId);
         }
-        return null;
+    };
+
+    const waitForTransaction = async (txhash) => {
+        await aptosClient.waitForTransaction(txhash);
     };
 
     const value = useMemo(() => ({
         mint,
         wlMint,
         checkLogin,
-        connect: () => connect(BloctoWalletName),
+        connect,
         connected,
         signAndSubmitTransaction,
+        waitForTransaction,
         isLoading,
         account,
         disconnect,
