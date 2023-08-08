@@ -4,9 +4,10 @@ import PropTypes from 'prop-types';
 import { Flex, Text, Button, Icon } from '@chakra-ui/react';
 import { useWalletContext } from '../context';
 import CONTRACT_ADDR from '../constant';
+import shovelMintingPrice from '../pages/merchant';
 
 const FlexBlock = ({ title, collectionName }) => {
-    const { connected, wlMint, account, waitForTransaction } = useWalletContext();
+    const { connected, getAptBalance, wlMint, account, waitForTransaction } = useWalletContext();
     const BAR_COUNT = 12;
     const [desc, setDesc] = useState('');
     const [isLoading, setIsLoading] = useState(true);
@@ -44,11 +45,14 @@ const FlexBlock = ({ title, collectionName }) => {
         setIsDisabled(true);
       }
       const [qResponse, wResponse] = await Promise.all(requests);
+      const aptBalance = await getAptBalance();
       const quotaResponse = await qResponse.json();
+      const freeQuota = quotaResponse[0]
+      const helfQuota = quotaResponse[1]
       if (Array.isArray(quotaResponse)) {
-        setDesc(`Free: ${quotaResponse[0]}\n50% off: ${quotaResponse[1]}`);
+        setDesc(`Free: ${freeQuota}\n50% off: ${helfQuota}`);
       } else {
-        console.log(`quotaResponse should be array instead of ${quotaResponse}`);
+        console.log(`quotaResponse should be array instead of ${JSON.stringify(quotaResponse, null, '	')}`);
       }
       if (wResponse) {
         console.log(`💥 account?.address: ${JSON.stringify(account?.address, null, '	')}`);
@@ -58,7 +62,19 @@ const FlexBlock = ({ title, collectionName }) => {
             const mintable = isWhitelistAndMintedResponse[1];
             const whitelisted = isWhitelistAndMintedResponse[0];
             if (mintable) {
-              setButtonText(whitelisted ? 'Claim' : 'Not eligible');
+              if (whitelisted) {
+                if (freeQuota == 0) {
+                  if (aptBalance <= (BigInt(shovelMintingPrice) / 2)) {
+                    setButtonText('You beggar');
+                  } else {
+                    setButtonText('Buy');
+                  }
+                } else {
+                  setButtonText('Claim');
+                }
+              } else {
+                setButtonText('Not eligible');
+              }
               setIsDisabled(!whitelisted);
             } else if (whitelisted) {
               setButtonText('Minted');
@@ -73,7 +89,7 @@ const FlexBlock = ({ title, collectionName }) => {
           } else {
             setButtonText('some thing wrong');
             console.log(
-              `isWhitelistResponse should be array instead of ${isWhitelistAndMintedResponse}`
+              `isWhitelistResponse should be array instead of ${JSON.stringify(isWhitelistAndMintedResponse, null, '	')}`
             );
           }
         } catch (error) {

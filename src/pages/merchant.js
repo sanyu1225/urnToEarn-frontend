@@ -1,7 +1,10 @@
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import PropTypes from 'prop-types';
 import { Box, Flex, Text, Button } from '@chakra-ui/react';
+import useSound from 'use-sound';
 import { useWalletContext } from '../context';
+import { fadeIn } from '../utils/animation';
 import Layout from '../layout';
 import HomeBg from '../assets/images/merchant/merchant_bg.png';
 import HomeBgWebp from '../assets/images/merchant/merchant_bg.webp';
@@ -17,10 +20,56 @@ import SkullImg from '../assets/images/merchant/merchant_skull.png';
 import SkullImgWebp from '../assets/images/merchant/merchant_skull.webp';
 import BoardBigImg from '../assets/images/merchant/merchant_board_big.png';
 import BoardBigImgWebp from '../assets/images/merchant/merchant_board_big.webp';
+import FireImg from '../assets/images/merchant/fire.png';
 import BowlImg from '../assets/images/merchant/bowl.svg';
+import ButtonClickAudio from '../assets/music/clickButton.mp3';
+import FireAudio from '../assets/music/fire.mp3';
+
+export const shovelMintingPrice = '1000000';
+export const urnMintingPrice = '10000000';
 
 const Merchant = ({ isSupportWebp }) => {
-    const { mint } = useWalletContext();
+    const { mint, connected, getAptBalance, waitForTransaction } = useWalletContext();
+    const [playButton] = useSound(ButtonClickAudio);
+    const [playFire, { stop }] = useSound(FireAudio);
+    const [showFire, setShowFire] = useState(false);
+    const [isShovelEnabled, setIsShovelEnabled] = useState(false);
+    const [isUrnEnabled, setIsUrnEnabled] = useState(false);
+
+    const checkMintEnabled = useCallback(async () => {
+        const aptBalance = await getAptBalance();
+        if (!aptBalance) return;
+        setIsShovelEnabled(aptBalance > BigInt(shovelMintingPrice));
+        setIsUrnEnabled(aptBalance > BigInt(urnMintingPrice));
+    }, [getAptBalance]);
+
+    const mintShovelButtonText = useMemo(() => {
+        if (connected) {
+            return isShovelEnabled ? 'Buy shovel' : 'Poor guy';
+        }
+        return 'connect wallet';
+    }, [connected, isShovelEnabled]);
+
+    const mintUrnButtonText = useMemo(() => {
+        if (connected) {
+            return isUrnEnabled ? 'Buy urn' : 'Poor guy';
+        }
+        return 'connect wallet';
+    }, [connected, isUrnEnabled]);
+
+    useEffect(() => {
+        if (!connected) return;
+        checkMintEnabled();
+    }, [connected, checkMintEnabled]);
+
+    const clickFireHandler = () => {
+        setShowFire(true);
+        playFire();
+        setTimeout(() => {
+            setShowFire(false);
+            stop();
+        }, 5000);
+    };
 
     return (
         <Layout>
@@ -80,7 +129,14 @@ const Merchant = ({ isSupportWebp }) => {
                         >
                             it&apos;s lame without the golden urn.
                         </Text>
-                        <Button variant="gold" onClick={() => mint('mint_golden_bone')} w={{ base: '140px', mid: '148px' }}>
+                        <Button
+                            variant="gold"
+                            onClick={() => {
+                                mint('mint_golden_bone');
+                                playFire();
+                            }}
+                            w={{ base: '140px', mid: '148px' }}
+                        >
                             Forge
                         </Button>
                     </Flex>
@@ -96,6 +152,22 @@ const Merchant = ({ isSupportWebp }) => {
                     position="absolute"
                     bottom="0px"
                     right={{ base: '13%', mid: '12%', desktop: '19%' }}
+                    onClick={clickFireHandler}
+                    cursor="pointer"
+                />
+                <Box
+                    bgImage={{
+                        base: FireImg.src,
+                    }}
+                    w={{ base: '72px' }}
+                    bgRepeat="no-repeat"
+                    bgSize="100% 100%"
+                    minH={{ base: '137px' }}
+                    position="absolute"
+                    bottom="39vh"
+                    right={{ base: '26%' }}
+                    display={showFire ? 'block' : 'none'}
+                    animation={`${fadeIn} 2s linear `}
                 />
                 <Flex
                     wrap="wrap"
@@ -119,24 +191,46 @@ const Merchant = ({ isSupportWebp }) => {
                         <Flex justifyContent="space-evenly" mt={{ base: '8rem', mid: '10rem', desktop: '10rem' }}>
                             <Flex wrap="wrap" w="40%" bg="#FCD791" borderRadius="20px" p={{ base: '14px', mid: '16px' }} justifyContent="center">
                                 <Text fontSize={{ base: '16px', mid: '20px' }} fontWeight={700} color="#292229" textAlign="center" w="100%">
-                                    Buy shovel
+                                    Buy shovel / {Number(shovelMintingPrice) / Number(10 ** 8)} APT
                                 </Text>
                                 <Text mt={{ base: '10px', mid: '12px' }} fontSize={{ base: '14px', mid: '20px' }} fontWeight={500} color="#292229" textAlign="center" w="100%">
                                     Every grave robber needs a shovel.
                                 </Text>
-                                <Button height={{ base: '47px' }} mt={{ base: '10px', mid: '12px' }} variant="dark" onClick={() => mint('mint_shovel')}>
-                                    Buy shovel
+                                <Button
+                                    height={{ base: '47px' }}
+                                    mt={{ base: '10px', mid: '12px' }}
+                                    variant="dark"
+                                    onClick={async () => {
+                                        const tx = await mint('mint_shovel');
+                                        await waitForTransaction(tx);
+                                        playButton();
+                                        checkMintEnabled();
+                                    }}
+                                    isDisabled={!isShovelEnabled}
+                                >
+                                    {mintShovelButtonText}
                                 </Button>
                             </Flex>
                             <Flex wrap="wrap" w="40%" bg="#FCD791" borderRadius="20px" p={{ base: '14px', mid: '16px' }} justifyContent="center">
                                 <Text fontSize={{ base: '16px', mid: '20px' }} fontWeight={700} color="#292229" textAlign="center" w="100%">
-                                    Buy urn
+                                    Buy urn / {Number(urnMintingPrice) / Number(10 ** 8)} APT
                                 </Text>
                                 <Text mt={{ base: '10px', mid: '12px' }} fontSize={{ base: '14px', mid: '20px' }} fontWeight={500} color="#292229" textAlign="center" w="100%">
                                     I think... you need an urn for bones.
                                 </Text>
-                                <Button height={{ base: '47px' }} mt={{ base: '10px', mid: '12px' }} variant="dark" onClick={() => mint('mint_urn')}>
-                                    Buy urn
+                                <Button
+                                    height={{ base: '47px' }}
+                                    mt={{ base: '10px', mid: '12px' }}
+                                    variant="dark"
+                                    onClick={async () => {
+                                        const tx = await mint('mint_urn');
+                                        await waitForTransaction(tx);
+                                        playButton();
+                                        checkMintEnabled();
+                                    }}
+                                    isDisabled={!isUrnEnabled}
+                                >
+                                    {mintUrnButtonText}
                                 </Button>
                             </Flex>
                         </Flex>
