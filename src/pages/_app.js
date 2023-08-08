@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-escape */
 /* eslint-disable react/jsx-no-useless-fragment */
 /* eslint-disable no-unused-vars */
 import { useEffect, useState } from 'react';
@@ -47,6 +48,7 @@ const client = new UrqlClient({
   // TODO: set env file for graphql endpoint
   url: 'https://indexer-testnet.staging.gcp.aptosdev.com/v1/graphql',
   exchanges: [cacheExchange, fetchExchange],
+  requestPolicy: 'network-only', // disable cache
 });
 
 export default function App({ Component, pageProps }) {

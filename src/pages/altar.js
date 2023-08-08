@@ -6,7 +6,7 @@ import useSound from 'use-sound';
 import { Box, Flex, Text, Button, Image } from '@chakra-ui/react';
 import { useQuery } from 'urql';
 import { isEmpty } from '@/plugin/lodash';
-import { queryAltarData } from '../constant';
+import { queryAltarData, CREATOR_ADDRESS } from '../constant';
 import { useWalletContext } from '../context';
 import Layout from '../layout';
 import Carousel from '@/component/Carousel';
@@ -50,6 +50,7 @@ const Altar = ({ isSupportWebp }) => {
         variables: {
             address,
             offset: 0,
+            creator_address: CREATOR_ADDRESS,
         },
     });
 
@@ -62,6 +63,10 @@ const Altar = ({ isSupportWebp }) => {
     useEffect(() => {
         if (connected) {
             reexecuteQuery();
+        } else {
+            setChoiseUrn({});
+            setChoiseBone([]);
+            setShowItem({ name: '', list: [] });
         }
     }, [connected, reexecuteQuery]);
 
@@ -305,7 +310,7 @@ const Altar = ({ isSupportWebp }) => {
                                     isDisabled={!connected || isEmpty(choiseUrn)}
                                     isLoading={fetching}
                                 >
-                                    {connected ? 'Select bone' : 'Connect wallet' }
+                                    {connected ? 'Select bone' : 'Connect wallet'}
                                 </Button>
                             </Flex>
                         </Flex>
