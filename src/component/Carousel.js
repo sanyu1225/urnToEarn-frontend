@@ -1,6 +1,3 @@
-/* eslint-disable no-plusplus */
-
-/* eslint-disable no-unused-vars */
 import PropTypes from 'prop-types';
 import { useState } from 'react';
 import SwiperCore, { Keyboard, Mousewheel } from 'swiper';
@@ -54,6 +51,7 @@ function Carousel({ NftList, selectItem, choiseItem }) {
                 />
             )}
             <Swiper
+                cssMode
                 spaceBetween={14}
                 onSwiper={(s) => {
                     setSwiper(s);
@@ -137,9 +135,9 @@ function Carousel({ NftList, selectItem, choiseItem }) {
                                         position="relative"
                                         w="100px"
                                         onClick={() => selectItem({
-                                                ...item,
-                                                choiseIndex,
-                                            })}
+                                            ...item,
+                                            choiseIndex,
+                                        })}
                                     >
                                         <Image
                                             w="100px"

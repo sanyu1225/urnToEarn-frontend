@@ -32,7 +32,7 @@ export const shovelMintingPrice = '1000000';
 export const urnMintingPrice = '10000000';
 
 const Merchant = ({ isSupportWebp }) => {
-    const { mint, connected, account, getAptBalance, waitForTransaction } = useWalletContext();
+    const { mint, connected, account, getAptBalance } = useWalletContext();
     const [playButton] = useSound(ButtonClickAudio);
     const [playFire, { stop }] = useSound(FireAudio);
     const [showFire, setShowFire] = useState(false);
@@ -153,11 +153,10 @@ const Merchant = ({ isSupportWebp }) => {
                         <Button
                             variant="gold"
                             onClick={async () => {
-                                const hash = await mint('forge');
-                                if (hash) {
-                                    await waitForTransaction(hash);
+                                const transaction = await mint('forge');
+                                if (transaction) {
+                                    reexecuteQuery();
                                 }
-                                reexecuteQuery();
                                 playFire();
                             }}
                             w={{ base: '140px', mid: '148px' }}
@@ -181,6 +180,8 @@ const Merchant = ({ isSupportWebp }) => {
                     right={{ base: '13%', mid: '12%', desktop: '19%' }}
                     onClick={clickFireHandler}
                     cursor="pointer"
+                    transition="transform 0.2s ease 0s"
+                    _hover={{ transform: 'scale(0.98)' }}
                 />
                 <Box
                     bgImage={{
@@ -192,7 +193,7 @@ const Merchant = ({ isSupportWebp }) => {
                     minH={{ base: '137px' }}
                     position="absolute"
                     bottom="39vh"
-                    right={{ base: '26%' }}
+                    right={{ base: '26%', desktop: '29%' }}
                     display={showFire ? 'block' : 'none'}
                     animation={`${fadeIn} 2s linear `}
                 />
@@ -248,10 +249,11 @@ const Merchant = ({ isSupportWebp }) => {
                                     mt={{ base: '10px', mid: '12px' }}
                                     variant="dark"
                                     onClick={async () => {
-                                        const tx = await mint('mint_shovel');
-                                        await waitForTransaction(tx);
                                         playButton();
-                                        checkMintEnabled();
+                                        const transaction = await mint('mint_shovel');
+                                        if (transaction) {
+                                            checkMintEnabled();
+                                        }
                                     }}
                                     isDisabled={!isShovelEnabled}
                                 >
@@ -290,10 +292,11 @@ const Merchant = ({ isSupportWebp }) => {
                                     mt={{ base: '10px', mid: '12px' }}
                                     variant="dark"
                                     onClick={async () => {
-                                        const tx = await mint('mint_urn');
-                                        await waitForTransaction(tx);
                                         playButton();
-                                        checkMintEnabled();
+                                        const transaction = await mint('mint_urn');
+                                        if (transaction) {
+                                            checkMintEnabled();
+                                        }
                                     }}
                                     isDisabled={!isUrnEnabled}
                                 >

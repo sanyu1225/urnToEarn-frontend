@@ -19,7 +19,6 @@ const RobButton = ({ choiseUrnPropertyVersion, victimAddress, isDisabled, isLoad
         query: queryAllUrnData,
         variables: {
             address: victimAddress,
-            offset: 0,
             creator_address: CREATOR_ADDRESS,
         },
     });
@@ -47,10 +46,8 @@ const RobButton = ({ choiseUrnPropertyVersion, victimAddress, isDisabled, isLoad
         );
         const params = [choiseUrnPropertyVersion, victim, maxUrn.property_version];
         console.log(`💥 params: ${JSON.stringify(params, null, '	')}`);
-        res = await mint('rob', params);
-
-        console.log('res: ', res);
-        if (res) {
+        transaction = await mint('rob', params);
+        if (transaction) {
             console.log('todo reload nft.');
             reexecuteQuery();
         }

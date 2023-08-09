@@ -1,8 +1,5 @@
-/* eslint-disable max-len */
-
-/* eslint-disable no-unused-vars */
 import PropTypes from 'prop-types';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from 'urql';
 import useSound from 'use-sound';
 
@@ -29,13 +26,18 @@ import UrnItemImg from '../assets/images/altar/urn_item.png';
 import UrnItemImgWebp from '../assets/images/altar/urn_item.webp';
 import ButtonClickAudio from '../assets/music/clickButton.mp3';
 import LaughAudio from '../assets/music/laugh.mp3';
-import { CREATOR_ADDRESS, queryAltarData } from '../constant';
+import { CREATOR_ADDRESS, queryAllUrnData, queryAltarData } from '../constant';
 import { useWalletContext } from '../context';
 import Layout from '../layout';
 
 import Carousel from '@/component/Carousel';
 import { isEmpty } from '@/plugin/lodash';
 import { fadeup } from '@/utils/animation';
+
+const functionNameMap = {
+    urn: 'burn_and_fill',
+    golden_urn: 'burn_and_fill_golden',
+};
 
 const Altar = ({ isSupportWebp }) => {
     const [showItem, setShowItem] = useState({ name: '', list: [] });
@@ -46,7 +48,7 @@ const Altar = ({ isSupportWebp }) => {
     const [playLaugh, { stop }] = useSound(LaughAudio);
     const [playButton] = useSound(ButtonClickAudio);
 
-    const { connected, account, mint } = useWalletContext();
+    const { connected, account, mint, waitForTransaction } = useWalletContext();
     const address = account && account.address;
 
     const [result, reexecuteQuery] = useQuery({
@@ -57,64 +59,87 @@ const Altar = ({ isSupportWebp }) => {
         },
     });
 
+    const [urnRsult, reexecuteUrnQuery] = useQuery({
+        query: queryAllUrnData,
+        variables: {
+            address,
+            creator_address: CREATOR_ADDRESS,
+        },
+    });
+
     const { data, fetching, error } = result;
+    const { data: urnData, fetching: urnFetching, error: urnError } = urnRsult;
+
     console.log('data: ', data);
+    console.log('urnData: ', urnData);
     console.log('error: ', error);
-    const UrnList = data && data?.current_token_ownerships?.filter((item) => item?.name === 'urn' || item?.name === 'golden_urn');
+    console.log('urnError: ', urnError);
+    const UrnList = urnData && urnData?.current_token_ownerships;
+    //  = data && data?.current_token_ownerships?.filter((item) => item?.name === 'urn' || item?.name === 'golden_urn');
+
+    const resetState = () => {
+        setChoiseUrn({});
+        setChoiseBone([]);
+        setShowItem({ name: '', list: [] });
+    };
 
     useEffect(() => {
         if (connected) {
             reexecuteQuery();
+            reexecuteUrnQuery();
         } else {
-            setChoiseUrn({});
-            setChoiseBone([]);
-            setShowItem({ name: '', list: [] });
+            resetState();
         }
-    }, [connected, reexecuteQuery]);
+    }, [connected, reexecuteQuery, reexecuteUrnQuery]);
 
     useEffect(() => {
-        if (choiseUrn?.length === 0) {
+        if (!choiseUrn || choiseUrn.length === 0) {
+            setBoneList([]);
             return;
         }
-        let boneNameList = [];
-        if (choiseUrn.name === 'urn') {
-            boneNameList = ['arm', 'leg', 'hip', 'chest', 'skull'];
-        }
-        if (choiseUrn.name === 'golden_urn') {
-            boneNameList = ['golden arm', 'golden leg', 'golden hip', 'golden chest', 'golden skull'];
-        }
-        const boneList = data && data?.current_token_ownerships?.filter((item) => boneNameList.includes(item?.name));
+
+        const baseBoneNames = ['arm', 'leg', 'hip', 'chest', 'skull'];
+        const prefix = choiseUrn.name === 'golden_urn' ? 'golden ' : '';
+        const boneNameList = baseBoneNames.map((bone) => prefix + bone);
+
+        const boneList = data?.current_token_ownerships?.filter((item) => boneNameList.includes(item?.name)) || [];
+
         setBoneList(boneList);
-    }, [choiseUrn, data]);
+    }, [choiseUrn, data, urnData]);
 
     const showItemHandler = async (item) => {
         playButton();
-        if (item === 'urn') {
-            console.log('UrnList: ', UrnList);
-            setShowItem({
-                name: 'urn',
-                list: UrnList,
-            });
-        } else {
-            console.log('boneList: ', boneList);
-            setShowItem({
-                name: 'bone',
-                list: boneList,
-            });
-        }
+        const isUrn = item === 'urn';
+        console.log(`${isUrn ? 'Urn' : 'Bone'}List: `, isUrn ? UrnList : boneList);
+
+        setShowItem({
+            name: isUrn ? 'urn' : 'bone',
+            list: isUrn ? UrnList : boneList,
+        });
     };
 
     const putInHandler = async () => {
-        console.log('todo put in contract.', choiseBone);
-        console.log('todo put in contract.', choiseUrn);
         const params = [choiseUrn.property_version, choiseBone.property_version, choiseBone.current_token_data.name];
-        const res = await mint('burn_and_fill', params);
-        console.log('res: ', res);
-        if (res) {
-            console.log('todo reload nft.');
+
+        const functionName = functionNameMap[choiseUrn.name];
+        if (!functionName) return;
+
+        const hash = await mint(functionName, params);
+        if (!hash) return;
+        await waitForTransaction(hash);
+        setTimeout(() => {
+            setChoiseUrn((state) => ({
+                ...state,
+                token_properties: {
+                    ...state.token_properties,
+                    ash: Number(state.token_properties.ash) + Number(choiseBone.token_properties.point),
+                },
+            }));
+            setChoiseBone([]);
+            setShowItem({ name: '', list: [] });
             reexecuteQuery();
-        }
-        playButton();
+            reexecuteUrnQuery();
+        }, 1000);
     };
 
     useEffect(() => {
@@ -135,13 +160,13 @@ const Altar = ({ isSupportWebp }) => {
         return UrnList && UrnList.length > 0;
     };
 
-    const urnButtonText = () => {
+    const urnButtonText = useMemo(() => {
         if (!connected) return 'Connect wallet';
         if (UrnList && UrnList.length > 0) {
             return 'Select urn';
         }
         return 'Buy one first';
-    };
+    }, [connected, UrnList]);
 
     return (
         <Layout>
@@ -177,6 +202,8 @@ const Altar = ({ isSupportWebp }) => {
                         bottom="0"
                         onClick={showGhostHandler}
                         cursor="pointer"
+                        transition="transform 0.2s ease 0s"
+                        _hover={{ transform: 'scale(0.98)' }}
                     />
                     <Box
                         bgImage={{
@@ -207,7 +234,7 @@ const Altar = ({ isSupportWebp }) => {
                     >
                         <Flex justifyContent="flex-end" mt="4rem" wrap="wrap" pr="2rem">
                             <Text
-                                pr="1rem"
+                                pr={choiseUrn?.token_properties?.ash ? '0.2rem' : '1rem'}
                                 w="100%"
                                 textAlign="right"
                                 color="#794D0B"
@@ -266,7 +293,7 @@ const Altar = ({ isSupportWebp }) => {
                         <Flex justifyContent="space-evenly" p="0 30px" mb="20px">
                             <Box position="relative">
                                 <Image alt="img" src={isSupportWebp ? UrnItemImgWebp.src : UrnItemImg.src} />
-                                {!isEmpty(choiseUrn?.current_token_data?.default_properties?.ASH) && (
+                                {!isEmpty(choiseUrn?.token_properties?.ash) && (
                                     <Text
                                         position="absolute"
                                         top="10px"
@@ -275,7 +302,7 @@ const Altar = ({ isSupportWebp }) => {
                                         color="#FFF3CD"
                                         fontWeight="600"
                                     >
-                                        {choiseUrn?.current_token_data?.default_properties?.ASH}%
+                                        {choiseUrn?.token_properties?.ash}%
                                     </Text>
                                 )}
                             </Box>
@@ -291,9 +318,9 @@ const Altar = ({ isSupportWebp }) => {
                                     variant="primary"
                                     onClick={() => showItemHandler('urn')}
                                     isDisabled={!isUrnEnabled()}
-                                    isLoading={fetching}
+                                    isLoading={urnFetching}
                                 >
-                                    {urnButtonText()}
+                                    {urnButtonText}
                                 </Button>
                             </Flex>
                         </Flex>
