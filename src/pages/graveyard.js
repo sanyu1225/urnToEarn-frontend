@@ -1,11 +1,11 @@
+import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import NextLink from 'next/link';
 import PropTypes from 'prop-types';
-import { useMemo, useState } from 'react';
+import { Box, Button, Flex, Link, Text } from '@chakra-ui/react';
 import { confetti } from 'tsparticles-confetti';
 import { useQuery } from 'urql';
 import useSound from 'use-sound';
-import { Box, Button, Flex, Link, Text } from '@chakra-ui/react';
 import BoneEffect1Img from '../assets/images/graveyard/bone_effect_1.png';
 import BoneEffect2Img from '../assets/images/graveyard/bone_effect_2.png';
 import LittleNormalBone from '../assets/images/graveyard/bone_normal.svg';
@@ -237,7 +237,7 @@ const Graveyard = ({ isSupportWebp }) => {
                         desktop: '37%',
                     }}
                     onClick={tombstoneHandler}
-                    cursor="url('/dig_cursor.ico'), auto"
+                    cursor="url('/dig_cursor.png'), pointer"
                     transition="transform 0.2s ease 0s"
                     _hover={{ transform: 'scale(0.98)' }}
                 >
@@ -316,8 +316,9 @@ const Graveyard = ({ isSupportWebp }) => {
                         w={{ base: '104px' }}
                         minH={{ base: '86px' }}
                         position="absolute"
-                        top={{ base: '-7%' }}
-                        right={{ base: '3%' }}
+                        top={{ base: '-7%', mid: '-2%', desktop: '-3%' }}
+                        right={{ base: '3%', mid: '1', desktop: '1%' }}
+                        transform={{ mid: 'rotate(9deg)', desktop: 'rotate(10deg)' }}
                         display={showButt ? 'block' : 'none'}
                         animation={`${bounceInAnimation} 2s linear `}
                     />
