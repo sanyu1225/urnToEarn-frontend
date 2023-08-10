@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import useSound from 'use-sound';
 import PropTypes from 'prop-types';
@@ -20,11 +20,17 @@ import {
     Textarea,
     Center,
 } from '@chakra-ui/react';
-import { isEmpty } from '@/plugin/lodash';
-import { queryAllUrnData, CREATOR_ADDRESS } from '../constant';
+import { isEmpty, debounce } from '@/plugin/lodash';
+import { queryAllUrnData, CREATOR_ADDRESS, getItemQuery } from '../constant';
 import { useWalletContext } from '../context';
 import Layout from '../layout';
+import LaserLoading from '../component/LoadingPage';
 import useCusToast from '../hooks/useCusToast';
+import useCopyToClipboard from '@/hooks/useCopyToClipboard';
+import { shortenAddress } from '@/utils';
+import Carousel from '@/component/Carousel';
+import ButtonClickAudio from '../assets/music/clickButton.mp3';
+import useRobData from '../hooks/useRobData';
 import HomeBaseBg from '../assets/images/robbery/robbery_1024.jpg';
 import HomeBaseBgWebp from '../assets/images/robbery/robbery_1024.webp';
 import Home1440Bg from '../assets/images/robbery/robbery_1440.jpg';
@@ -36,76 +42,72 @@ import RobberWebp from '../assets/images/robbery/robber.webp';
 import RobberyBrand from '../assets/images/robbery/robbery_brand.png';
 import RobberyBrandWebp from '../assets/images/robbery/robbery_brand.webp';
 import CopyIcon from '@/assets/images/icons/CopyLight.svg';
-import useCopyToClipboard from '@/hooks/useCopyToClipboard';
-import { shortenAddress } from '@/utils';
-import Carousel from '@/component/Carousel';
-import ButtonClickAudio from '../assets/music/clickButton.mp3';
-
-const fakeAddressList = [{
-    address: '0x1234567890123456789012345678901234567890',
-    success: false,
-    account: '50',
-}, {
-    address: '0x1234567890123456789012345678901234567891',
-    success: true,
-    account: '40',
-}, {
-    address: '0x1234567890123456789012345678901234567892',
-    success: false,
-    account: '30',
-}, {
-    address: '0x1234567890123456789012345678901234567893',
-    success: true,
-    account: '20',
-}, {
-    address: '0x1234567890123456789012345678901234567894',
-    success: false,
-    account: '10',
-}, {
-    address: '0x1234567890123456789012345678901234567895',
-    success: true,
-    account: '5',
-}, {
-    address: '0x1234567890123456789012345678901234567896',
-    success: false,
-    account: '1',
-}, {
-    address: '0x1234567890123456789012345678901234567897',
-    success: true,
-    account: '0.5',
-}];
 
 const Robbery = ({ isSupportWebp }) => {
     const [copyToClipboard] = useCopyToClipboard();
-    const [choiseUrn, setChoiseUrn] = useState({});
+    const { connected, account, mint } = useWalletContext();
     const [playButton] = useSound(ButtonClickAudio);
     const { isOpen, onOpen, onClose } = useDisclosure();
+    const [choiseUrn, setChoiseUrn] = useState({});
     const [inputAddress, setInputAddress] = useState('');
     const [inputMessage, setInputMessage] = useState('');
     const [modalType, setModalType] = useState('random');
-    const { connected, account, mint } = useWalletContext();
-    const address = account && account.address;
+    const [debounceInputAddr, setDebounceInputAddr] = useState('');
     const { toastError } = useCusToast();
 
+    const address = account && account.address;
     const [result, reexecuteQuery] = useQuery({
         query: queryAllUrnData,
         variables: {
             address,
-            offset: 0,
             creator_address: CREATOR_ADDRESS,
         },
     });
-
+    const [specifyAddrResult] = useQuery({
+        query: queryAllUrnData,
+        variables: {
+            address: debounceInputAddr,
+            creator_address: CREATOR_ADDRESS,
+        },
+    });
+    const [knifeResult, fetchUserKnife] = useQuery({
+        query: getItemQuery('knife'),
+        variables: {
+            address,
+            creator_address: CREATOR_ADDRESS,
+        },
+    });
+    const { data: knifeData } = knifeResult;
+    const knifeAmount = knifeData?.current_token_ownerships[0]?.amount ?? 0;
     const { data } = result;
     const UrnList = data && data?.current_token_ownerships;
+
+    const specifyAddrUrnList = specifyAddrResult?.data && specifyAddrResult?.data?.current_token_ownerships;
+    const [robResult, fetchRobData] = useRobData(address);
+    const { data: robdata, isLoading: robIsLoading } = robResult;
+
+    // only specific need get urnList from address
+    useEffect(() => {
+        const debouncedInput = debounce((value) => {
+            if (connected && modalType === 'specific') {
+                setDebounceInputAddr(value);
+            }
+        }, 800);
+        debouncedInput(inputAddress);
+        return () => {
+            debouncedInput.cancel();
+        };
+    }, [inputAddress, connected, modalType]);
 
     useEffect(() => {
         if (connected) {
             reexecuteQuery();
+            fetchRobData();
+            fetchUserKnife();
         } else {
             setChoiseUrn({});
         }
-    }, [connected, reexecuteQuery]);
+    }, [connected, reexecuteQuery, fetchRobData, fetchUserKnife]);
 
     const robHandler = async (type) => {
         setModalType(type);
@@ -113,16 +115,24 @@ const Robbery = ({ isSupportWebp }) => {
         playButton();
     };
 
+    const isOverByteLimit = (input, limit = 256) => {
+        const byteSize = new Blob([input]).size;
+        return byteSize > limit;
+    };
+
     const robButtonText = useMemo(() => {
         if (!connected) return 'Not connected';
+        if (knifeAmount <= 0) return "you don't have a knife";
+        if (isOverByteLimit(inputMessage)) return 'Message too long';
         if (UrnList && UrnList.length > 0) {
             return modalType === 'random' ? 'Rob a fucker' : 'Rob specific fucker';
         }
         return 'Buy one first';
-    }, [connected, UrnList, modalType]);
+    }, [connected, UrnList, modalType, knifeAmount, inputMessage]);
 
     const closeModalHandler = () => {
         onClose();
+        setChoiseUrn({});
         setInputAddress('');
         setInputMessage('');
     };
@@ -130,37 +140,51 @@ const Robbery = ({ isSupportWebp }) => {
     const submitRob = async () => {
         try {
             if (modalType === 'random') {
-                if (inputMessage === '') {
-                    toastError('Message is required');
-                    return;
-                }
-
-                const params = [choiseUrn.property_version];
+                const params = [choiseUrn.property_version, String(inputMessage)];
                 const transaction = await mint('random_rob', params);
-                console.log('transaction: ', transaction);
                 if (transaction) {
+                    closeModalHandler();
                     setTimeout(() => {
-                        closeModalHandler();
                         reexecuteQuery();
-                    }, 3000);
+                    }, 1000);
                 }
             } else if (modalType === 'specific') {
-                if (inputAddress === '' || inputMessage === '') {
-                    toastError('Input is required');
-                    return;
-                }
-                const params = [choiseUrn.property_version];
+                const versions = !isEmpty(specifyAddrUrnList) && specifyAddrUrnList.map((ownership) => ownership.property_version);
+                const maxVersion = !isEmpty(specifyAddrUrnList) ? Math.max(...versions) : null;
+                // TODO validate inputMessage length
+                const params = [choiseUrn.property_version, inputAddress, maxVersion, String(inputMessage)];
                 const transaction = await mint('rob', params);
-                console.log('transaction: ', transaction);
                 if (transaction) {
+                    closeModalHandler();
                     setTimeout(() => {
-                        closeModalHandler();
                         reexecuteQuery();
-                    }, 3000);
+                    }, 1000);
                 }
             }
         } catch (error) {
             console.error('error: ', error);
+            toastError(String(error));
+        }
+    };
+
+    const robButtonDisabled = () => {
+        if (knifeAmount <= 0) {
+            return true;
+        }
+        if (isOverByteLimit(inputMessage)) {
+            return true;
+        }
+        if (modalType === 'random') {
+            if (inputMessage === '' || isEmpty(choiseUrn)) {
+                return true;
+            }
+            return !!isEmpty(UrnList);
+        }
+        if (modalType === 'specific') {
+            if (inputAddress === '' || inputMessage === '' || isEmpty(choiseUrn)) {
+                return true;
+            }
+            return !!isEmpty(UrnList) || !!isEmpty(specifyAddrUrnList);
         }
     };
 
@@ -244,76 +268,85 @@ const Robbery = ({ isSupportWebp }) => {
                     pl="84px"
                     display="block"
                 >
-                    <Text
-                        color="#FFF5CE"
-                        fontSize={{ base: '20px' }}
-                        fontWeight={700}
-                        h="26px"
-                        mb="8px"
-                    >
-                        Who robbed you?
-                    </Text>
-                    <Flex
-                        w="100%"
-                        flexWrap="wrap"
-                        maxH={{ base: '400px' }}
-                        overflow="auto"
-                        position="relative"
-                    >
-                        {
-                            fakeAddressList?.length && fakeAddressList.map((item, index) => (
-                                <Flex key={index} flexWrap="wrap" borderBottom="1px solid #383732" mt="12px">
-                                    <Flex
-                                        justifyContent="flex-start"
+                    {
+                        robIsLoading ? (
+                            <LaserLoading width="100%" height="100%" bg="transparent" />
+
+                        ) : (
+                            <>
+                                <Text
+                                    color="#FFF5CE"
+                                    fontSize={{ base: '20px' }}
+                                    fontWeight={700}
+                                    h="26px"
+                                    mb="8px"
+                                >
+                                    Who robbed you?
+                                </Text>
+                                <Flex
+                                    w="100%"
+                                    flexWrap="wrap"
+                                    maxH={{ base: '400px' }}
+                                    overflow="auto"
+                                    position="relative"
+                                >
+                                    {
+                                        robdata?.length && robdata.map((item, index) => (
+                                            <Flex key={index} flexWrap="wrap" borderBottom="1px solid #383732" mt="12px">
+                                                <Flex
+                                                    justifyContent="flex-start"
+                                                    w="100%"
+                                                    key={index}
+                                                    h="20px"
+                                                    gap="12px"
+                                                >
+                                                    <Text color="#FFF3CD" fontSize="14px" fontWeight={700}>
+                                                        {item.data.robber && shortenAddress(item.data.robber, 8)}
+                                                    </Text>
+                                                    <Box
+                                                        cursor="pointer"
+                                                        onClick={() => copyToClipboard(item.data.robber)}
+                                                    >
+                                                        <Image alt="copy" src={CopyIcon} />
+                                                    </Box>
+                                                </Flex>
+                                                <Flex alignItems="center" mt="4px" mb="12px">
+                                                    <Text
+                                                        color="#CCC2A1"
+                                                        fontSize="14px"
+                                                        fontWeight={700}
+                                                        _after={{
+                                                            content: '""',
+                                                            display: 'inline-block',
+                                                            background: '#CCC2A1',
+                                                            width: '1px',
+                                                            height: '10px',
+                                                            marginLeft: '5px',
+                                                        }}
+                                                        mr="10px"
+                                                    >
+                                                        Success: {String(item.data.success)}
+                                                    </Text>
+                                                    <Text color="#CCC2A1" fontSize="14px" fontWeight={700}>
+                                                        Amount: {item.data.amount}
+                                                    </Text>
+                                                </Flex>
+                                            </Flex>
+                                        ))
+                                    }
+                                    <Box
+                                        position="sticky"
+                                        left="0"
+                                        bottom="0"
                                         w="100%"
-                                        key={index}
-                                        h="20px"
-                                        gap="12px"
-                                    >
-                                        <Text color="#FFF3CD" fontSize="14px" fontWeight={700}>
-                                            {item.address && shortenAddress(item.address, 8)}
-                                        </Text>
-                                        <Box
-                                            cursor="pointer"
-                                            onClick={() => copyToClipboard(item.address)}
-                                        >
-                                            <Image alt="copy" src={CopyIcon} />
-                                        </Box>
-                                    </Flex>
-                                    <Flex alignItems="center" mt="4px" mb="12px">
-                                        <Text
-                                            color="#CCC2A1"
-                                            fontSize="14px"
-                                            fontWeight={700}
-                                            _after={{
-                                                content: '""',
-                                                display: 'inline-block',
-                                                background: '#CCC2A1',
-                                                width: '1px',
-                                                height: '10px',
-                                                marginLeft: '5px',
-                                            }}
-                                            mr="10px"
-                                        >
-                                            Success: {String(item.success)}
-                                        </Text>
-                                        <Text color="#CCC2A1" fontSize="14px" fontWeight={700}>
-                                            Account: {item.account}
-                                        </Text>
-                                    </Flex>
+                                        h="80px"
+                                        pointerEvents="none"
+                                        bgGradient="linear-gradient(transparent, rgb(27 26 29))"
+                                    />
                                 </Flex>
-                            ))
-                        }
-                        <Box
-                            position="sticky"
-                            left="0"
-                            bottom="0"
-                            w="100%"
-                            h="80px"
-                            pointerEvents="none"
-                            bgGradient="linear-gradient(transparent, rgb(27 26 29))"
-                        />
-                    </Flex>
+                            </>
+                        )
+                    }
 
                 </Box>
                 <Modal
@@ -372,7 +405,10 @@ const Robbery = ({ isSupportWebp }) => {
                                                 Address
                                             </Text>
                                         </Box>
-                                        <Input placeholder="0x..." />
+                                        <Input
+                                            placeholder="0x..."
+                                            onChange={(e) => setInputAddress(e.target.value)}
+                                        />
 
                                     </>
                                 )
@@ -383,7 +419,6 @@ const Robbery = ({ isSupportWebp }) => {
                                     textAlign="left"
                                     fontSize="16px"
                                     fontWeight={700}
-                                    onChange={(e) => setInputAddress(e.target.value)}
                                 >
                                     Message
                                 </Text>
@@ -401,7 +436,7 @@ const Robbery = ({ isSupportWebp }) => {
                             />
 
                             <Center mt="24px">
-                                <Button isDisabled={!!isEmpty(UrnList)} onClick={submitRob}>
+                                <Button isDisabled={robButtonDisabled()} onClick={submitRob}>
                                     {robButtonText}
                                 </Button>
                             </Center>

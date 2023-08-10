@@ -5,13 +5,13 @@ import { useMemo, useState } from 'react';
 import { confetti } from 'tsparticles-confetti';
 import { useQuery } from 'urql';
 import useSound from 'use-sound';
-
 import { Box, Button, Flex, Link, Text } from '@chakra-ui/react';
 import BoneEffect1Img from '../assets/images/graveyard/bone_effect_1.png';
 import BoneEffect2Img from '../assets/images/graveyard/bone_effect_2.png';
 import LittleNormalBone from '../assets/images/graveyard/bone_normal.svg';
 import LittleGoldenBone from '../assets/images/graveyard/bone_golden.svg';
 import LittleKnife from '../assets/images/graveyard/knife.svg';
+import GoldenShard from '../assets/images/graveyard/golden_shard.svg';
 import ButtImg from '../assets/images/graveyard/butt.png';
 import HomeBaseBg from '../assets/images/graveyard/graveyard_1024.jpg';
 import HomeBaseBgWebp from '../assets/images/graveyard/graveyard_1024.webp';
@@ -32,7 +32,7 @@ import TombstoneImg from '../assets/images/graveyard/tombstone.png';
 import TombstoneImgWebp from '../assets/images/graveyard/tombstone.webp';
 import FartAudio from '../assets/music/fart.mp3';
 import { CREATOR_ADDRESS, getItemQuery } from '../constant';
-import { interpretTransaction, useWalletContext } from '../context';
+import { useWalletContext } from '../context';
 import Layout from '../layout';
 import { bounceInAnimation } from '../utils/animation';
 import { randomInRange } from '../utils/randomInRange';
@@ -65,6 +65,15 @@ const CustomLink = ({ children, right, top, path, transform, disabled = false })
 const baseBoneNames = ['arm', 'leg', 'hip', 'chest', 'skull'];
 const goldenBoneNames = baseBoneNames.map((bone) => `golden ${bone}`);
 
+const getItemFromTransaction = (transaction) => {
+    const event = transaction.events.find(
+        (event) => event.type === '0x3::token::DepositEvent'
+            && event.guid
+            && event.guid.account_address === transaction.sender,
+    );
+    return event.data.id.token_data_id.name;
+};
+
 const showConfetti = (itemName) => {
     let image;
     if (baseBoneNames.includes(itemName)) {
@@ -74,7 +83,7 @@ const showConfetti = (itemName) => {
     } else if (itemName === 'knife') {
         image = LittleKnife;
     } else {
-        image = LittleKnife;
+        image = GoldenShard;
     }
     confetti({
         angle: randomInRange(50, 57),
@@ -171,7 +180,7 @@ const Graveyard = ({ isSupportWebp }) => {
         try {
             const transaction = await mint('dig');
             if (!transaction) return;
-            const itemName = interpretTransaction(transaction);
+            const itemName = getItemFromTransaction(transaction);
             showConfetti(itemName);
             setTimeout(() => {
                 reexecuteQuery();
@@ -228,7 +237,7 @@ const Graveyard = ({ isSupportWebp }) => {
                         desktop: '37%',
                     }}
                     onClick={tombstoneHandler}
-                    cursor="pointer"
+                    cursor="url('/dig_cursor.ico'), auto"
                     transition="transform 0.2s ease 0s"
                     _hover={{ transform: 'scale(0.98)' }}
                 >

@@ -19,13 +19,31 @@ export function useWalletContext() {
     return useContext(Context);
 }
 
-export const interpretTransaction = (transaction) => {
+const interpretTransaction = (transaction) => {
+    if (transaction.payload.function.includes('burn_and_fill')) {
+        const event = transaction.events.find(
+            (event) => event.type === '0x3::token::MutateTokenPropertyMapEvent'
+                && event.data
+                && event.guid.account_address === transaction.sender,
+        );
+        const hexString = event.data.values[0];
+        const decimal = parseInt(hexString, 16);
+        return `Your urn now contains ${decimal} ashes`;
+    }
+    if (transaction.payload.function.includes('random_rob') || transaction.payload.function.includes('rob')) {
+        const event = transaction.events.find(
+            (event) => event.type.includes('::knife::BeenRobbedEvent'),
+        );
+        const status = event.data.success;
+        return `Your robbery ${status ? 'succeeded' : 'failed'}`;
+    }
+
     const event = transaction.events.find(
-        (value) => value.type === '0x3::token::DepositEvent'
-        && value.guid
-        && value.guid.account_address === transaction.sender,
+        (event) => event.type === '0x3::token::DepositEvent'
+            && event.guid
+            && event.guid.account_address === transaction.sender,
     );
-    return event.data.id.token_data_id.name;
+    return `You've got a ${event.data.id.token_data_id.name}`;
 };
 
 export function ContextProvider({ children }) {
@@ -83,11 +101,12 @@ export function ContextProvider({ children }) {
                 type_arguments: [],
             };
             const hash = await signAndSubmitTransactionFnc(params);
+            console.log('hash: ', hash);
             const transaction = await waitForTransactionWithResult(hash);
             console.log(`💥 transaction: ${JSON.stringify(transaction, null, '  ')}`);
             if (transaction) {
-                const itemName = interpretTransaction(transaction);
-                toastSeccess(`you've got a ${itemName}`);
+                const desc = interpretTransaction(transaction);
+                toastSeccess(desc);
                 return transaction;
             }
             toastError(`transaction not found, hash ${hash}`);
@@ -100,7 +119,7 @@ export function ContextProvider({ children }) {
             } else if (error instanceof ApiError) {
                 toastError(`${error.message} ${error.vmErrorCode}`);
             } else {
-                toastError(error);
+                toastError(String(error));
             }
             return null;
         }

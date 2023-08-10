@@ -48,7 +48,7 @@ const Altar = ({ isSupportWebp }) => {
     const [playLaugh, { stop }] = useSound(LaughAudio);
     const [playButton] = useSound(ButtonClickAudio);
 
-    const { connected, account, mint, waitForTransaction } = useWalletContext();
+    const { connected, account, mint } = useWalletContext();
     const address = account && account.address;
 
     const [result, reexecuteQuery] = useQuery({
@@ -124,17 +124,22 @@ const Altar = ({ isSupportWebp }) => {
         const functionName = functionNameMap[choiseUrn.name];
         if (!functionName) return;
 
-        const hash = await mint(functionName, params);
-        if (!hash) return;
-        await waitForTransaction(hash);
+        const transaction = await mint(functionName, params);
+        if (!transaction) return;
         setTimeout(() => {
-            setChoiseUrn((state) => ({
-                ...state,
-                token_properties: {
-                    ...state.token_properties,
-                    ash: Number(state.token_properties.ash) + Number(choiseBone.token_properties.point),
-                },
-            }));
+            setChoiseUrn((state) => {
+                const ash = Number(state.token_properties.ash);
+                const point = Number(choiseBone.token_properties.point);
+
+                return {
+                    ...state,
+                    token_properties: {
+                        ...state.token_properties,
+                        ash: Number.isNaN(ash) ? point : ash + point,
+                    },
+                };
+            });
+
             setChoiseBone([]);
             setShowItem({ name: '', list: [] });
             reexecuteQuery();
@@ -248,7 +253,7 @@ const Altar = ({ isSupportWebp }) => {
                             </Text>
                             <Button
                                 variant="putIn"
-                                isDisabled={!connected || isEmpty(choiseUrn)}
+                                isDisabled={!connected || isEmpty(choiseUrn) || isEmpty(choiseBone)}
                                 isLoading={fetching}
                                 onClick={putInHandler}
                             >
