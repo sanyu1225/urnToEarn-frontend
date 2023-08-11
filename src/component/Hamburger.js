@@ -195,11 +195,6 @@ const Hamburger = ({ hideMenu }) => {
                             <AnimationLink path="/merchant">Merchant</AnimationLink>
                             <AnimationLink path="/graveyard">Graveyard</AnimationLink>
                             <AnimationLink path="/altar">Altar</AnimationLink>
-                            <AnimationLink path="/robbery">Robbery</AnimationLink>
-                            <AnimationLink disabled path="/teleport">
-                                Reincarnation *Coming soon
-                            </AnimationLink>
-                            <AnimationLink path="/faq">FAQ</AnimationLink>
                         </Grid>
                         <Flex wrap="wrap">
                             <Divider mt="40px" mb="25px" borderColor="#FFF3CD" />

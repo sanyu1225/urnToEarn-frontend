@@ -3,7 +3,22 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from 'urql';
 import useSound from 'use-sound';
 
-import { Box, Button, Flex, Image, Text } from '@chakra-ui/react';
+import {
+    Box,
+    Button,
+    Flex,
+    Image,
+    Text,
+    useDisclosure,
+    Input,
+    Center,
+    Modal,
+    ModalBody,
+    ModalCloseButton,
+    ModalContent,
+    ModalHeader,
+    ModalOverlay,
+ } from '@chakra-ui/react';
 import AltarImg from '../assets/images/altar/altar.png';
 import AltarImgWebp from '../assets/images/altar/altar.webp';
 import HomeBaseBg from '../assets/images/altar/altar_1024.jpg';
@@ -29,6 +44,7 @@ import LaughAudio from '../assets/music/laugh.mp3';
 import { CREATOR_ADDRESS, queryAllUrnData, queryAltarData } from '../constant';
 import { useWalletContext } from '../context';
 import Layout from '../layout';
+import useReincarnation from '../hooks/useReincarnation';
 
 import Carousel from '@/component/Carousel';
 import { isEmpty } from '@/plugin/lodash';
@@ -37,9 +53,12 @@ import { fadeup } from '@/utils/animation';
 const functionNameMap = {
     urn: 'burn_and_fill',
     golden_urn: 'burn_and_fill_golden',
+    reincarnate: 'reincarnate',
 };
 
 const Altar = ({ isSupportWebp }) => {
+    const { isOpen, onOpen, onClose } = useDisclosure();
+    const [inputPolygonAddress, setInputPolygonAddress] = useState('');
     const [showItem, setShowItem] = useState({ name: '', list: [] });
     const [choiseUrn, setChoiseUrn] = useState({});
     const [choiseBone, setChoiseBone] = useState([]);
@@ -47,6 +66,8 @@ const Altar = ({ isSupportWebp }) => {
     const [showGhost, setShowGhost] = useState(false);
     const [playLaugh, { stop }] = useSound(LaughAudio);
     const [playButton] = useSound(ButtonClickAudio);
+    const [teleportResult, fetchTeleportData] = useReincarnation();
+    const { data: teleportData, error: teleportError, isLoading: teleportIsLoading } = teleportResult;
 
     const { connected, account, mint } = useWalletContext();
     const address = account && account.address;
@@ -173,6 +194,37 @@ const Altar = ({ isSupportWebp }) => {
         return 'Buy one first';
     }, [connected, UrnList]);
 
+    const putInDisable = () => {
+        if (choiseUrn?.token_properties?.ash === '100') {
+            return false;
+        }
+        if (!connected || isEmpty(choiseUrn) || isEmpty(choiseBone)) {
+            return true;
+        }
+        return false;
+    };
+
+    const submitReincarnate = async () => {
+        const functionName = functionNameMap.reincarnate;
+        console.log(`💥 choiseUrn.property_version: ${JSON.stringify(choiseUrn.property_version, null, '  ')}`);
+        const transaction = await mint(functionName, [choiseUrn.property_version, inputPolygonAddress]);
+        console.log(`💥 transaction: ${JSON.stringify(transaction, null, '  ')}`);
+        if (!transaction) return;
+        fetchTeleportData(transaction.hash, inputPolygonAddress);
+        setTimeout(() => {
+            resetState();
+            reexecuteQuery();
+            reexecuteUrnQuery();
+        }, 1000);
+    };
+
+    const closeModalHandler = () => {
+        onClose();
+        resetState();
+        reexecuteQuery();
+        reexecuteUrnQuery();
+    };
+
     return (
         <Layout>
             <Box
@@ -251,14 +303,26 @@ const Altar = ({ isSupportWebp }) => {
                                 {choiseUrn?.token_properties?.ash ?? '- -'}
                                 {choiseUrn?.token_properties?.ash && ' %'}
                             </Text>
-                            <Button
-                                variant="putIn"
-                                isDisabled={!connected || isEmpty(choiseUrn) || isEmpty(choiseBone)}
-                                isLoading={fetching}
-                                onClick={putInHandler}
-                            >
-                                Put in
-                            </Button>
+                            {choiseUrn?.token_properties?.ash === '100' ? (
+                                    <Button
+                                        variant="putIn"
+                                        isDisabled={putInDisable()}
+                                        isLoading={fetching}
+                                        onClick={onOpen}
+                                    >
+                                        Reveal
+                                    </Button>
+                                    )
+                                    : (
+                                    <Button
+                                        variant="putIn"
+                                        isDisabled={putInDisable()}
+                                        isLoading={fetching}
+                                        onClick={putInHandler}
+                                    >
+                                    Put in
+                                    </Button>
+                                    )}
                         </Flex>
                     </Box>
                 </Box>
@@ -390,6 +454,41 @@ const Altar = ({ isSupportWebp }) => {
                             ))}
                     </Flex>
                 </Flex>
+
+                <Modal
+                    blockScrollOnMount={false}
+                    isOpen={isOpen}
+                    onClose={closeModalHandler}
+                >
+                    <ModalOverlay />
+                    <ModalContent p="28px" bg="#292229">
+                        <ModalHeader p="0 0 20px 0px" alignItems="center" color="#FFF3CD">Time to Reincarnate</ModalHeader>
+                        <ModalCloseButton m="20px" color="#FFF3CD" />
+                        <ModalBody p="0">
+                            {teleportData ? (
+                                teleportError || 'Reincarnate Succeed, check your polygon account!'
+                            ) : (
+                                <>
+                                    <Box w="100%" m="12px 0">
+                                        <Text color="#FFF3CD" textAlign="left" fontSize="16px" fontWeight={700}>
+                                            Reincarnate to polygon mumbai testnet
+                                        </Text>
+                                    </Box>
+                                    <Input
+                                        placeholder="0x..."
+                                        onChange={(e) => setInputPolygonAddress(e.target.value)}
+                                    />
+
+                                    <Center mt="24px">
+                                        <Button isDisabled={!inputPolygonAddress || teleportIsLoading} isLoading={teleportIsLoading} onClick={submitReincarnate}>
+                                            Reincarnate
+                                        </Button>
+                                    </Center>
+                                </>
+                            )}
+                        </ModalBody>
+                    </ModalContent>
+                </Modal>
             </Box>
         </Layout>
     );

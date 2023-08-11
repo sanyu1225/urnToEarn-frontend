@@ -1,8 +1,8 @@
 import { gql } from 'urql';
 
-const CONTRACT_ADDR = process.env.REACT_CONTRACT_ADDRESS || '0x56260c419e8b176e0ca7f6d439b69180c2de2cb284d8dee24476f247af204492';
+const CONTRACT_ADDR = process.env.REACT_CONTRACT_ADDRESS || '0xd640a1d7f3e7236a7aa95fa6e9a69531ad3c88ee9601b8a4afabe73d25b48508';
 
-export const CREATOR_ADDRESS = process.env.REACT_CREATOR_ADDRESS || '0xc8d6637a9adc7023cde6f50bc26171151c53ede0eacc4167b832e61ebfde2cff';
+export const CREATOR_ADDRESS = process.env.REACT_CREATOR_ADDRESS || '0x407cb892bb8e0b71c46f0f04a852d1b4e8ad8433f368814383482059b0401c3f';
 
 export default CONTRACT_ADDR;
 

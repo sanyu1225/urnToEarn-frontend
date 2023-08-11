@@ -1,11 +1,8 @@
-import Image from 'next/image';
 import PropTypes from 'prop-types';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useQuery } from 'urql';
 import useSound from 'use-sound';
 
 import { Box, Button, Flex, Text } from '@chakra-ui/react';
-import BowlImg from '../assets/images/merchant/bowl.svg';
 import FireImg from '../assets/images/merchant/fire.png';
 import HomeBaseBg from '../assets/images/merchant/merchant_1024.jpg';
 import HomeBaseBgWebp from '../assets/images/merchant/merchant_1024.webp';
@@ -15,15 +12,12 @@ import HomeBg from '../assets/images/merchant/merchant_bg.png';
 import HomeBgWebp from '../assets/images/merchant/merchant_bg.webp';
 import BoardBigImg from '../assets/images/merchant/merchant_board_big.png';
 import BoardBigImgWebp from '../assets/images/merchant/merchant_board_big.webp';
-import BoardSmallImg from '../assets/images/merchant/merchant_board_small.png';
-import BoardSmallImgWebp from '../assets/images/merchant/merchant_board_small.webp';
 import FurnaceImg from '../assets/images/merchant/merchant_furnace.png';
 import FurnaceImgWebp from '../assets/images/merchant/merchant_furnace.webp';
 import SkullImg from '../assets/images/merchant/merchant_skull.png';
 import SkullImgWebp from '../assets/images/merchant/merchant_skull.webp';
 import ButtonClickAudio from '../assets/music/clickButton.mp3';
 import FireAudio from '../assets/music/fire.mp3';
-import { CREATOR_ADDRESS, getItemQuery } from '../constant';
 import { useWalletContext } from '../context';
 import Layout from '../layout';
 import { fadeIn } from '../utils/animation';
@@ -31,14 +25,22 @@ import { fadeIn } from '../utils/animation';
 export const shovelMintingPrice = '1000000';
 export const urnMintingPrice = '10000000';
 
+const NotiveMessage = [
+    'Acquires a shovel, hasten to the gloomy graveyard, and unearth the secrets hidden beneath the hallowed ground!',
+    "Don't neglect to purchase an urn. If you unearth the bones of the deceased, haste to the altar! There, your path will become clear.",
+    "Unearth shiny shards? Bring them, I'll forge a golden urn. Need 69 shards minimum. Why? It's my quirk!",
+];
+
 const Merchant = ({ isSupportWebp }) => {
-    const { mint, connected, account, getAptBalance } = useWalletContext();
+    const { mint, connected, getAptBalance } = useWalletContext();
     const [playButton] = useSound(ButtonClickAudio);
     const [playFire, { stop }] = useSound(FireAudio);
     const [showFire, setShowFire] = useState(false);
     const [isShovelEnabled, setIsShovelEnabled] = useState(false);
     const [isUrnEnabled, setIsUrnEnabled] = useState(false);
-    const address = account && account.address;
+    const [noticeInfo, setNoticeInfo] = useState('');
+    const [noticeIndex, setNoticeIndex] = useState(0);
+    const [isDisabled, setIsDisabled] = useState(false);
 
     const checkMintEnabled = useCallback(async () => {
         const aptBalance = await getAptBalance();
@@ -79,20 +81,22 @@ const Merchant = ({ isSupportWebp }) => {
         }, 5000);
     };
 
-    const [result, reexecuteQuery] = useQuery({
-        query: getItemQuery('shard'),
-        variables: {
-            address,
-            creator_address: CREATOR_ADDRESS,
-        },
-    });
+    const showNotice = () => {
+        if (isDisabled) return;
+        setNoticeInfo(NotiveMessage[noticeIndex]);
+        setNoticeIndex((noticeIndex + 1) % NotiveMessage.length);
+        setIsDisabled(true);
+    };
 
-    const { data, fetching, error } = result;
-    const shardAmount = data?.current_token_ownerships[0]?.amount ?? 0;
-
-    console.log(`💥 data: ${JSON.stringify(data, null, ' ')}`);
-    console.log(`💥 query shard data error: ${JSON.stringify(error, null, ' ')}`);
-
+    useEffect(() => {
+        if (isDisabled) {
+            const timer = setTimeout(() => {
+                setNoticeInfo('');
+                setIsDisabled(false);
+            }, 15000);
+            return () => clearTimeout(timer);
+        }
+    }, [isDisabled]);
     return (
         <Layout>
             <Box
@@ -109,63 +113,23 @@ const Merchant = ({ isSupportWebp }) => {
                 position="relative"
             >
                 <Box
-                    bgImage={{
-                        base: isSupportWebp ? BoardSmallImgWebp.src : BoardSmallImg.src,
-                    }}
-                    bgRepeat="no-repeat"
-                    bgSize="100% 100%"
-                    w={{ base: '193px', mid: '246px' }}
-                    h={{ base: '281px', mid: '358px' }}
+                    w={{ base: '245px', mid: '300px' }}
                     position="absolute"
-                    bottom={{ base: '35vh', mid: '34vh', desktop: '32vh' }}
-                    right={{ base: '4%', mid: '3.5%', desktop: '12%' }}
+                    bottom={{ base: '30%', mid: '40%', desktop: '32%' }}
+                    left={{ base: '0%', mid: '8%', desktop: '20%' }}
+                    borderRadius="20px"
+                    border="1px solid #FFF3CD"
+                    bg="#292229"
+                    p="18px 24px"
+                    display={noticeInfo ? 'block' : 'none'}
+                    animation={`${fadeIn} 2s linear `}
                 >
-                    <Flex
-                        justifyContent="center"
-                        mt={{ base: '3rem', mid: '4.5rem', desktop: '5rem' }}
-                        wrap="wrap"
-                        p={{ base: '0 29px', mid: '0 49px' }}
-                        pb="2.3rem"
+                    <Text
+                        fontSize="14px"
+                        color="#FFF3CD"
                     >
-                        <Text
-                            w="100%"
-                            textAlign="center"
-                            color="#794D0B"
-                            fontSize={{ base: '16px', mid: '20px' }}
-                            fontWeight={700}
-                            mb={{ base: '10px', mid: '14px', desktop: '14px' }}
-                        >
-                            Golden urn
-                        </Text>
-                        <Image src={BowlImg} alt="Bowl" />
-                        <Text
-                            w="100%"
-                            textAlign="center"
-                            color="#794D0B"
-                            fontSize="14px"
-                            fontWeight={500}
-                            mb={{ base: '10px', mid: '14px', desktop: '14px' }}
-                            mt={{ base: '10px', mid: '14px', desktop: '14px' }}
-                            lineHeight={{ base: '20px' }}
-                        >
-                            it&apos;s lame without the golden urn. {shardAmount}/10
-                        </Text>
-                        <Button
-                            variant="gold"
-                            onClick={async () => {
-                                const transaction = await mint('forge');
-                                if (transaction) {
-                                    reexecuteQuery();
-                                }
-                                playFire();
-                            }}
-                            w={{ base: '140px', mid: '148px' }}
-                            isLoading={fetching}
-                            isDisabled={!connected || shardAmount < 10}
-                        >
-                            Forge
-                        </Button>
-                    </Flex>
+                        {noticeInfo}
+                    </Text>
                 </Box>
                 <Box
                     bgImage={{
@@ -313,6 +277,10 @@ const Merchant = ({ isSupportWebp }) => {
                         bgSize="100% 100%"
                         w={{ base: '362px', mid: '491px' }}
                         h={{ base: '381px', mid: '517px' }}
+                        cursor="pointer"
+                        transition="transform 0.2s ease 0s"
+                        _hover={{ transform: 'scale(0.98)' }}
+                        onClick={showNotice}
                     />
                 </Flex>
             </Box>
