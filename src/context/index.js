@@ -37,6 +37,14 @@ const interpretTransaction = (transaction) => {
         const status = event.data.success;
         return `Your robbery ${status ? 'succeeded' : 'failed'}`;
     }
+    if (transaction.payload.function.includes('reincarnate')) {
+        const events = transaction.events.find(
+            (event) => event.type.includes('::BurnEvent')
+                && event.data.burner
+                && event.data.des_addr,
+        );
+        return `Reincarnate Polygon ${events.data.des_addr}`;
+    }
 
     const event = transaction.events.find(
         (event) => event.type === '0x3::token::DepositEvent'

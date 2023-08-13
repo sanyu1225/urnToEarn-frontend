@@ -18,7 +18,7 @@ import {
     ModalContent,
     ModalHeader,
     ModalOverlay,
- } from '@chakra-ui/react';
+} from '@chakra-ui/react';
 import AltarImg from '../assets/images/altar/altar.png';
 import AltarImgWebp from '../assets/images/altar/altar.webp';
 import HomeBaseBg from '../assets/images/altar/altar_1024.jpg';
@@ -304,25 +304,25 @@ const Altar = ({ isSupportWebp }) => {
                                 {choiseUrn?.token_properties?.ash && ' %'}
                             </Text>
                             {choiseUrn?.token_properties?.ash === '100' ? (
-                                    <Button
-                                        variant="putIn"
-                                        isDisabled={putInDisable()}
-                                        isLoading={fetching}
-                                        onClick={onOpen}
-                                    >
-                                        Reveal
-                                    </Button>
-                                    )
-                                    : (
+                                <Button
+                                    variant="putIn"
+                                    isDisabled={putInDisable()}
+                                    isLoading={fetching}
+                                    onClick={onOpen}
+                                >
+                                    Reveal
+                                </Button>
+                            )
+                                : (
                                     <Button
                                         variant="putIn"
                                         isDisabled={putInDisable()}
                                         isLoading={fetching}
                                         onClick={putInHandler}
                                     >
-                                    Put in
+                                        Put in
                                     </Button>
-                                    )}
+                                )}
                         </Flex>
                     </Box>
                 </Box>
