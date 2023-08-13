@@ -44,7 +44,6 @@ import LaughAudio from '../assets/music/laugh.mp3';
 import { CREATOR_ADDRESS, queryAllUrnData, queryAltarData } from '../constant';
 import { useWalletContext } from '../context';
 import Layout from '../layout';
-import useReincarnation from '../hooks/useReincarnation';
 
 import Carousel from '@/component/Carousel';
 import { isEmpty } from '@/plugin/lodash';
@@ -66,8 +65,6 @@ const Altar = ({ isSupportWebp }) => {
     const [showGhost, setShowGhost] = useState(false);
     const [playLaugh, { stop }] = useSound(LaughAudio);
     const [playButton] = useSound(ButtonClickAudio);
-    const [teleportResult, fetchTeleportData] = useReincarnation();
-    const { data: teleportData, error: teleportError, isLoading: teleportIsLoading } = teleportResult;
 
     const { connected, account, mint } = useWalletContext();
     const address = account && account.address;
@@ -210,7 +207,6 @@ const Altar = ({ isSupportWebp }) => {
         const transaction = await mint(functionName, [choiseUrn.property_version, inputPolygonAddress]);
         console.log(`💥 transaction: ${JSON.stringify(transaction, null, '  ')}`);
         if (!transaction) return;
-        fetchTeleportData(transaction.hash, inputPolygonAddress);
         setTimeout(() => {
             resetState();
             reexecuteQuery();
@@ -465,27 +461,21 @@ const Altar = ({ isSupportWebp }) => {
                         <ModalHeader p="0 0 20px 0px" alignItems="center" color="#FFF3CD">Time to Reincarnate</ModalHeader>
                         <ModalCloseButton m="20px" color="#FFF3CD" />
                         <ModalBody p="0">
-                            {teleportData ? (
-                                teleportError || 'Reincarnate Succeed, check your polygon account!'
-                            ) : (
-                                <>
-                                    <Box w="100%" m="12px 0">
-                                        <Text color="#FFF3CD" textAlign="left" fontSize="16px" fontWeight={700}>
-                                            Reincarnate to polygon mumbai testnet
-                                        </Text>
-                                    </Box>
-                                    <Input
-                                        placeholder="0x..."
-                                        onChange={(e) => setInputPolygonAddress(e.target.value)}
-                                    />
+                            <Box w="100%" m="12px 0">
+                                <Text color="#FFF3CD" textAlign="left" fontSize="16px" fontWeight={700}>
+                                    Reincarnate to polygon mumbai testnet
+                                </Text>
+                            </Box>
+                            <Input
+                                placeholder="0x..."
+                                onChange={(e) => setInputPolygonAddress(e.target.value)}
+                            />
 
-                                    <Center mt="24px">
-                                        <Button isDisabled={!inputPolygonAddress || teleportIsLoading} isLoading={teleportIsLoading} onClick={submitReincarnate}>
-                                            Reincarnate
-                                        </Button>
-                                    </Center>
-                                </>
-                            )}
+                            <Center mt="24px">
+                                <Button isDisabled={!inputPolygonAddress} onClick={submitReincarnate}>
+                                    Reincarnate
+                                </Button>
+                            </Center>
                         </ModalBody>
                     </ModalContent>
                 </Modal>
